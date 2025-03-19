@@ -18,8 +18,4 @@ export class SignupDto {
   @IsEmail()
   readonly email: string;
 
-  @ApiProperty({ description: 'Roles of the user', example: ['user', 'admin'] })
-  @IsArray()
-  @IsOptional()
-  readonly roles?: string[];
 }
