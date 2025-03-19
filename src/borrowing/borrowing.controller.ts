@@ -1,34 +1,62 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Param,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
 import { BorrowingService } from './borrowing.service';
-import { CreateBorrowingDto } from './dto/create-borrowing.dto';
-import { UpdateBorrowingDto } from './dto/update-borrowing.dto';
+import { ApiBearerAuth, ApiOperation, ApiTags, ApiParam } from '@nestjs/swagger';
 
+import { RolesEnum } from 'src/user/enum/roles';
+import { AuthGuard } from 'src/auth/guards/auth.guard';
+import { RolesGuard } from 'src/auth/guards/roles.guard';
+import { Roles } from 'src/auth/decorator/roles.decorator';
+
+
+@ApiBearerAuth('access_token')
+@ApiTags('Borrowing')
 @Controller('borrowing')
 export class BorrowingController {
   constructor(private readonly borrowingService: BorrowingService) {}
 
-  @Post()
-  create(@Body() createBorrowingDto: CreateBorrowingDto) {
-    return this.borrowingService.create(createBorrowingDto);
+  @ApiOperation({ summary: 'Borrow a book by its ID' })
+  @ApiParam({ name: 'bookId', description: 'ID of the book to borrow' })
+  @UseGuards(AuthGuard)
+  @Post('borrow/:bookId')
+  async bookBorrow(@Param('bookId') bookId: string, @Request() req) {
+    return this.borrowingService.borrowBook(req.user.sub, bookId);
   }
 
-  @Get()
-  findAll() {
-    return this.borrowingService.findAll();
+  @ApiOperation({ summary: 'Return a borrowed book by its borrowing ID' })
+  @ApiParam({ name: 'borrowingId', description: 'ID of the borrowing record' })
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(RolesEnum.ADMIN)
+  @Post('return/:borrowingId')
+  returnBook(@Param('borrowingId') borrowingId: string, @Request() req) {
+    return this.borrowingService.returnBook(borrowingId, req.user);
   }
 
+  @ApiOperation({ summary: 'Get all borrowing records' })
+  @Get('all')
+  async find() {
+    return this.borrowingService.getAllBorrow();
+  }
+
+  @ApiOperation({ summary: 'Get all borrowing records of a user by user ID' })
+  @ApiParam({ name: 'userId', description: 'ID of the user' })
+  @UseGuards(AuthGuard)
+  @Get('user/:userId')
+  async userBorrowing(@Param('userId') userId: string, @Request() req) {
+    return this.borrowingService.userBorrowing(userId, req.user);
+  }
+
+  @ApiOperation({ summary: 'Get borrowing record by its ID' })
+  @ApiParam({ name: 'id', description: 'ID of the borrowing record' })
+  @UseGuards(AuthGuard)
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.borrowingService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateBorrowingDto: UpdateBorrowingDto) {
-    return this.borrowingService.update(+id, updateBorrowingDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.borrowingService.remove(+id);
+  async findById(@Param('id') id: string, @Request() req) {
+    return this.borrowingService.findById(id, req.user);
   }
 }
